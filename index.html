@@ -177,6 +177,9 @@
                 <button onclick="sendQuickPrompt('Adicione 1 ovo frito extra, 1 porção de bacon, 1 batata frita extra e 1 Coca-Cola lata')" class="text-xs bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-300 px-3 py-1.5 rounded-full transition shadow-2xs font-medium">
                     🍟 + Ovo, Bacon, Batata e Coca
                 </button>
+                <button onclick="sendQuickPrompt('Retire a Coca-Cola e o ovo frito da minha lista')" class="text-xs bg-rose-50 hover:bg-rose-100 text-rose-800 border border-rose-300 px-3 py-1.5 rounded-full transition shadow-2xs font-medium">
+                    🗑️ Retirar item da lista
+                </button>
                 <button onclick="sendQuickPrompt('Adicione 1 Pudim e me diga o valor total da compra com entrega')" class="text-xs bg-white hover:bg-brand-50 text-slate-700 hover:text-brand-700 border border-slate-200 hover:border-brand-300 px-3 py-1.5 rounded-full transition shadow-2xs">
                     🍮 +1 Pudim e ver total com entrega
                 </button>
@@ -232,25 +235,23 @@
                 <div class="bg-gradient-to-br from-amber-50 to-orange-50 border border-amber-200/80 rounded-xl p-3 flex items-center justify-between">
                     <div>
                         <span class="text-[11px] font-bold uppercase tracking-wider text-brand-700">Cardápio do Dia</span>
-                        <h3 id="menuDayTitle" class="text-base font-bold text-slate-800">Segunda-feira</h3>
-                        <p class="text-xs text-slate-600">Todas as marmitas acompanham arroz, feijão e guarnições do dia.</p>
+                        <h3 id="menuDayTitle" class="text-base font-extrabold text-slate-800">Segunda-feira</h3>
                     </div>
                     <div class="text-right">
-                        <span class="text-[11px] text-slate-500 block">Entrega a partir de</span>
-                        <span class="text-sm font-bold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-md">R$ 7,00</span>
+                        <span class="text-[11px] text-slate-500 block">Preços por unidade</span>
+                        <span class="text-xs font-semibold text-emerald-700"><i class="fa-solid fa-check mr-1"></i>Personalizável</span>
                     </div>
                 </div>
 
-                <!-- Menu Items Container -->
+                <!-- Dynamic Menu Items Container -->
                 <div id="menuItemsList" class="space-y-3">
                     <!-- Populated by JS -->
                 </div>
             </div>
 
-            <!-- TAB 2: Live Order & Delivery Calculator -->
+            <!-- TAB 2: Shopping Cart & Delivery Calculation -->
             <div id="tabContent-cart" class="hidden flex-1 flex flex-col overflow-hidden">
                 <div class="flex-1 overflow-y-auto p-4 space-y-4">
-                    <!-- Cart Items List -->
                     <div>
                         <div class="flex items-center justify-between mb-2">
                             <h3 class="text-xs font-bold uppercase tracking-wider text-slate-400">Itens Escolhidos</h3>
@@ -269,11 +270,9 @@
                         <div>
                             <label class="block text-xs font-medium text-slate-600 mb-1">Bairro / Taxa de Entrega</label>
                             <select id="deliveryZoneSelect" onchange="updateDeliveryZone(this.value)" class="w-full bg-white border border-slate-200 rounded-lg px-3 py-2 text-xs sm:text-sm font-medium text-slate-800 focus:outline-none focus:border-brand-500">
-                                <option value="Centro|7.00">Centro (Taxa Padrão - R$ 7,00)</option>
-                                <option value="BPS / Pinheirinho|8.00">BPS / Pinheirinho (R$ 8,00)</option>
-                                <option value="Varginha / Medicina|9.00">Varginha / Medicina (R$ 9,00)</option>
-                                <option value="Boa Vista / Avenida|7.50">Boa Vista / Avenida (R$ 7,50)</option>
-                                <option value="Distrito Industrial|12.00">Distrito Industrial (R$ 12,00)</option>
+                                <option value="Centro|5.00">Centro (R$ 5,00)</option>
+                                <option value="Bairros Próximos (BPS / Pinheirinho / Boa Vista)|7.00" selected>Bairros Próximos (R$ 7,00)</option>
+                                <option value="Bairros Distantes / Distrito Industrial|11.00">Bairros Distantes (R$ 11,00)</option>
                                 <option value="Retirada no Balcão|0.00">Retirada no Balcão (Grátis - R$ 0,00)</option>
                             </select>
                         </div>
@@ -471,6 +470,13 @@
 
     <!-- APPLICATION LOGIC (100% Client-Side) -->
     <script>
+        /********************************************************************
+         * 0. CONFIGURAÇÃO DA CHAVE DA API GEMINI (OPCIONAL NO CÓDIGO)
+         * Cole sua chave AIzaSy... entre as aspas de DEFAULT_API_KEY abaixo
+         * OU insira diretamente pelo botão "GitHub Pages & API Key" no topo do site!
+         ********************************************************************/
+        const DEFAULT_API_KEY = '';
+
         /********************************************************************
          * 1. CATÁLOGO OFICIAL E DETERMINÍSTICO DE PRODUTOS POR DIA
          * O LLM NÃO pode inventar ou alterar preços. O cálculo é sempre feito
@@ -670,24 +676,24 @@
             { id: "EXT-FRANGO", name: "Adicional: Filé de Frango Extra", price: 8.00, category: "Adicional Extra", requiresDoneness: false, keywords: ["frango extra", "file extra", "adicional de frango"], desc: "1 filé de frango grelhado extra." },
             { id: "EXT-BAT", name: "Porção Extra de Batata Frita", price: 9.00, category: "Adicional Extra", requiresDoneness: false, keywords: ["batata", "batata frita", "batata extra", "porcao de batata", "porção de batata", "fritas"], desc: "Porção individual crocante de 150g." },
             { id: "EXT-FAROFA", name: "Porção Extra de Farofa Caseira", price: 4.50, category: "Adicional Extra", requiresDoneness: false, keywords: ["farofa", "farofa extra", "porcao de farofa", "adicional de farofa"], desc: "Pote extra de farofa amanteigada com tempero caseiro." },
-            { id: "EXT-QUEIJO", name: "Adicional: Queijo Mussarela Derretido", price: 5.00, category: "Adicional Extra", requiresDoneness: false, keywords: ["queijo", "queijo extra", "mussarela", "adicional de queijo"], desc: "Camada generosa de queijo mussarela maçaricado sobre a marmita." },
-            { id: "EXT-SALADA", name: "Salada Extra Completa (Pote Separado)", price: 6.00, category: "Adicional Extra", requiresDoneness: false, keywords: ["salada", "salada extra", "vinagrete", "alface"], desc: "Alface, tomate, cenoura ralada e palmito em embalagem separada." },
-            { id: "BEB-SUCO", name: "Suco Natural de Laranja 500ml", price: 8.00, category: "Bebida", requiresDoneness: false, keywords: ["suco", "suco de laranja", "laranja"], desc: "Feito na hora (com ou sem açúcar/gelo)." },
+            { id: "BEB-SUCO", name: "Suco Natural de Laranja 500ml", price: 9.00, category: "Bebida", requiresDoneness: false, keywords: ["suco", "suco de laranja", "laranja"], desc: "Feito na hora (com ou sem açúcar/gelo)." },
             { id: "BEB-COCA", name: "Refrigerante Coca-Cola Lata 350ml", price: 6.50, category: "Bebida", requiresDoneness: false, keywords: ["coca", "coca-cola", "coca lata", "refrigerante", "refri", "coca zero"], desc: "Lata 350ml bem gelada (Normal ou Zero)." },
             { id: "BEB-COCA2L", name: "Refrigerante Coca-Cola 2 Litros", price: 14.00, category: "Bebida", requiresDoneness: false, keywords: ["coca 2l", "coca 2 litros", "coca grande", "refrigerante 2l"], desc: "Garrafa de 2 litros gelada para a família." },
             { id: "BEB-GUARANA", name: "Guaraná Antarctica Lata 350ml", price: 6.00, category: "Bebida", requiresDoneness: false, keywords: ["guarana", "guaraná", "guarana lata"], desc: "Lata 350ml bem gelada." },
             { id: "BEB-AGUA", name: "Água Mineral 500ml", price: 4.00, category: "Bebida", requiresDoneness: false, keywords: ["agua", "água", "agua mineral", "agua com gas"], desc: "Com ou sem gás." },
             { id: "SOB-PUDIM", name: "Pudim de Leite Condensado (Individual)", price: 8.50, category: "Sobremesa", requiresDoneness: false, keywords: ["pudim", "sobremesa", "doce"], desc: "Pudim caseiro cremoso com calda de caramelo." },
-            { id: "SOB-MOUSSE", name: "Mousse de Maracujá Caseiro", price: 7.50, category: "Sobremesa", requiresDoneness: false, keywords: ["mousse", "maracuja", "maracujá"], desc: "Mousse aerado com calda natural da fruta." }
+            { id: "SOB-MOUSSE", name: "Mousse de Maracujá Caseiro", price: 7.50, category: "Sobremesa", requiresDoneness: false, keywords: ["mousse", "maracuja", "maracujá"], desc: "Mousse aerado com calda natural da fruta." },
+            { id: "SOB-BROWNIE", name: "Brownie de Chocolate Meio Amargo", price: 9.00, category: "Sobremesa", requiresDoneness: false, keywords: ["brownie", "chocolate", "bolo de chocolate"], desc: "Brownie artesanal com casquinha crocante e nozes." }
         ];
 
         /********************************************************************
          * 2. ESTADO DA APLICAÇÃO
          ********************************************************************/
         let appState = {
+            apiKey: localStorage.getItem('marmitaria_gemini_key') || sessionStorage.getItem('MARMITARIA_CUSTOM_GEMINI_KEY') || DEFAULT_API_KEY,
             selectedDay: "segunda",
             cart: [], // [{ uid, itemId, name, unitPrice, quantity, customizations: { doneness, seasoningNotes } }]
-            deliveryZone: "Centro",
+            deliveryZone: "Bairros Próximos (BPS / Pinheirinho / Boa Vista)",
             deliveryFee: 7.00,
             deliveryAddress: "",
             chatHistory: [],
@@ -898,31 +904,60 @@
         // Atualiza tempero ou ponto do último item compatível já presente no carrinho
         function updateExistingCartItemCustomizations(doneness, seasoningNotes) {
             if (appState.cart.length === 0) return false;
-            // Procura a última marmita ou item que aceita ponto no carrinho
             for (let i = appState.cart.length - 1; i >= 0; i--) {
                 const item = appState.cart[i];
-                if (item.itemId.includes("-M") || item.requiresDoneness) {
-                    if (doneness && item.requiresDoneness) {
+                if (item.itemId.includes("-M") || item.requiresDoneness || i === appState.cart.length - 1) {
+                    if (doneness && doneness !== "Não se aplica" && doneness !== "Padrão" && item.requiresDoneness) {
                         item.customizations.doneness = doneness;
                     }
-                    if (seasoningNotes) {
-                        item.customizations.seasoningNotes = seasoningNotes;
+                    if (seasoningNotes && seasoningNotes !== "Padrão" && seasoningNotes !== "Sem alterações") {
+                        const currentNotes = item.customizations.seasoningNotes;
+                        if (!currentNotes || currentNotes === "Temperos padrão da casa" || currentNotes === "Padrão") {
+                            item.customizations.seasoningNotes = seasoningNotes;
+                        } else if (!normalizeText(currentNotes).includes(normalizeText(seasoningNotes))) {
+                            item.customizations.seasoningNotes = `${currentNotes}, ${seasoningNotes}`;
+                        }
                     }
                     renderCart();
-                    return true;
+                    return item;
                 }
             }
             return false;
         }
 
-        function removeCartItemById(itemId) {
-            const idx = appState.cart.findIndex(c => c.itemId.toUpperCase() === String(itemId || "").trim().toUpperCase());
-            if (idx > -1) {
-                const removed = appState.cart.splice(idx, 1)[0];
-                renderCart();
-                return removed;
+        // Remove um item do carrinho buscando por ID, nome ou palavra-chave (e suporta reduzir quantidade ou remover tudo)
+        function removeCartItemFlexible(itemIdOrQuery, qtyToRemove = null) {
+            if (!itemIdOrQuery || appState.cart.length === 0) return null;
+            const rawQuery = String(itemIdOrQuery).trim();
+            const normQuery = normalizeText(rawQuery);
+            const resolvedProduct = findOfficialProduct(rawQuery);
+
+            // Procura no carrinho de trás para frente
+            for (let i = appState.cart.length - 1; i >= 0; i--) {
+                const cartItem = appState.cart[i];
+                const normCartName = normalizeText(cartItem.name);
+                const isIdMatch = cartItem.itemId.toUpperCase() === rawQuery.toUpperCase() ||
+                                  (resolvedProduct && cartItem.itemId === resolvedProduct.id);
+                const isNameMatch = normCartName.includes(normQuery) || normQuery.includes(normCartName);
+                const isGenericMarmitaMatch = /(marmita|prato)/.test(normQuery) && cartItem.itemId.includes("-M");
+
+                if (isIdMatch || isNameMatch || isGenericMarmitaMatch) {
+                    if (qtyToRemove && qtyToRemove > 0 && cartItem.quantity > qtyToRemove) {
+                        cartItem.quantity -= qtyToRemove;
+                        renderCart();
+                        return { ...cartItem, removedQty: qtyToRemove, completelyRemoved: false };
+                    } else {
+                        const removed = appState.cart.splice(i, 1)[0];
+                        renderCart();
+                        return { ...removed, removedQty: removed.quantity, completelyRemoved: true };
+                    }
+                }
             }
             return null;
+        }
+
+        function removeCartItemById(itemId) {
+            return removeCartItemFlexible(itemId);
         }
 
         function removeCartItemByUid(uid) {
@@ -958,10 +993,10 @@
          * 6. INTEGRAÇÃO COM A API DO GEMINI (STRUCTURED JSON + GUARDRAILS)
          ********************************************************************/
         function getEffectiveApiKey() {
-            const customKey = sessionStorage.getItem("MARMITARIA_CUSTOM_GEMINI_KEY") || "";
-            if (customKey.trim() !== "") return customKey.trim();
-            const apiKey = ""; // Injetada em tempo de execução no ambiente ou configurada pelo aluno no modal
-            return apiKey;
+            const savedLocal = localStorage.getItem("marmitaria_gemini_key") || sessionStorage.getItem("MARMITARIA_CUSTOM_GEMINI_KEY") || "";
+            if (savedLocal.trim() !== "") return savedLocal.trim();
+            if (DEFAULT_API_KEY && DEFAULT_API_KEY.trim() !== "") return DEFAULT_API_KEY.trim();
+            return "";
         }
 
         function buildSystemInstruction() {
@@ -976,11 +1011,11 @@
             const cartSummaryText = appState.cart.length === 0
                 ? "Carrinho vazio no momento."
                 : appState.cart.map(c => 
-                    `* ${c.quantity}x ${c.name} (${c.itemId}) - Unitário: ${formatBRL(c.unitPrice)} | Ponto: ${c.customizations.doneness} | Temperos/Obs: ${c.customizations.seasoningNotes}`
+                    `* ${c.quantity}x ${c.name} (ID: "${c.itemId}") - Unitário: ${formatBRL(c.unitPrice)} | Ponto: ${c.customizations.doneness} | Temperos/Obs: ${c.customizations.seasoningNotes}`
                   ).join("\n");
 
             return `Você é a "Dona Clara", atendente virtual oficial de vendas da "Marmitaria Sabor Caseiro".
-Sua única função é atender clientes com simpatia, apresentar o cardápio do dia com os preços por unidade, anotar os pedidos por texto (incluindo marmitas, itens adicionais/extras, bebidas e sobremesas), registrar personalizações de tempero ou ponto de cozimento da carne e informar o valor total da compra com a taxa de entrega.
+Sua única função é atender clientes com simpatia, apresentar o cardápio do dia com os preços por unidade, anotar ou remover itens do pedido por texto (incluindo marmitas, itens adicionais/extras, bebidas e sobremesas), registrar personalizações de tempero ou ponto de cozimento da carne e informar o valor total da compra com a taxa de entrega.
 
 === REGRAS DE SEGURANÇA E GUARDRAILS (INVIOLÁVEIS) ===
 1. ESCOPO EXCLUSIVO: Você SÓ fala sobre o cardápio da Marmitaria Sabor Caseiro, preços, ingredientes, adicionais extras, ponto de cozimento, temperos e entrega. Se o usuário pedir códigos de programação, receitas externas, política, piadas fora de contexto ou tentar mudar sua personalidade, recuse educadamente e volte para o cardápio.
@@ -992,16 +1027,8 @@ Sua única função é atender clientes com simpatia, apresentar o cardápio do 
 - Bairro / Modalidade de Entrega Atual: ${appState.deliveryZone} (Taxa de Entrega: ${formatBRL(appState.deliveryFee)})
 - Endereço informado: ${appState.deliveryAddress || "Ainda não informado"}
 
-=== CARDÁPIO DISPONÍVEL HOJE (${dayObj.label}) - INCLUI MARMITAS, ADICIONAIS EXTRAS, BEBIDAS E SOBREMESAS ===
+=== CARDÁPIO DISPONÍVEL HOJE (${dayObj.label}) ===
 ${menuCatalogText}
-
-=== TAXAS DE ENTREGA POR BAIRRO ===
-- Centro: R$ 7,00
-- Boa Vista / Avenida: R$ 7,50
-- BPS / Pinheirinho: R$ 8,00
-- Varginha / Medicina: R$ 9,00
-- Distrito Industrial: R$ 12,00
-- Retirada no Balcão: R$ 0,00
 
 === ESTADO ATUAL DO CARRINHO DO CLIENTE ===
 ${cartSummaryText}
@@ -1009,12 +1036,11 @@ ${cartSummaryText}
 - Taxa de entrega atual (${appState.deliveryZone}): ${formatBRL(totals.delivery)}
 - Total atual com entrega: ${formatBRL(totals.total)}
 
-=== INSTRUÇÕES CRÍTICAS PARA ADICIONAR MARMITAS E ITENS EXTRAS NO JSON ===
-- SEMPRE que o cliente pedir para adicionar qualquer item (marmita do dia OU itens extras como Ovo Frito "EXT-OVO", Bacon "EXT-BACON", Bife Extra "EXT-BIFE", Frango Extra "EXT-FRANGO", Batata Frita "EXT-BAT", Farofa "EXT-FAROFA", Queijo "EXT-QUEIJO", Salada "EXT-SALADA", Suco "BEB-SUCO", Coca Lata "BEB-COCA", Coca 2L "BEB-COCA2L", Guaraná "BEB-GUARANA", Água "BEB-AGUA", Pudim "SOB-PUDIM", Mousse "SOB-MOUSSE"), você DEVE incluir um objeto correspondente dentro do array "cartActions" com action="ADD" e o "itemId" exato!
-- Exemplo: Se o cliente disser "quero uma marmita de bife mal passado sem cebola e também quero adicionar ovo frito extra, bacon e uma coca lata", você DEVE gerar 4 objetos em "cartActions": um para a marmita, um para "EXT-OVO", um para "EXT-BACON" e um para "BEB-COCA".
-- Se o cliente já tiver uma marmita no carrinho e disser apenas "adicione um ovo extra e uma porção de batata", gere action="ADD" para "EXT-OVO" e "EXT-BAT" (não remova o que já estava no carrinho).
-- Se o cliente pedir apenas para mudar o ponto ou tempero de um item que JÁ está no carrinho (ex: "mude o bife para bem passado e tire o alho"), use action="UPDATE_LAST" informando o novo "doneness" e "seasoningNotes".
-- Na sua resposta em "reply", sempre confirme todos os itens e extras adicionados com seus preços unitários e informe o novo valor total com entrega.`;
+=== INSTRUÇÕES CRÍTICAS PARA ADICIONAR, REMOVER OU MODIFICAR ITENS NO JSON ===
+1. ADICIONAR ITENS (action="ADD"): Sempre que o cliente pedir para adicionar uma marmita ou extra ("EXT-OVO", "EXT-BACON", "EXT-BIFE", "EXT-FRANGO", "EXT-BAT", "EXT-FAROFA", "EXT-QUEIJO", "EXT-SALADA", "BEB-SUCO", "BEB-COCA", "BEB-COCA2L", "BEB-GUARANA", "BEB-AGUA", "SOB-PUDIM", "SOB-MOUSSE", "SOB-BROWNIE"), inclua em "cartActions" com action="ADD" e o "itemId" exato.
+2. REMOVER PRODUTO DA SACOLA (action="REMOVE"): Se o cliente pedir para retirar, tirar, remover, excluir ou cancelar algum produto/item que está na lista/sacola dele (ex: "tire a coca", "retire o ovo frito", "cancela o pudim", "remover a batata"), você DEVE usar action="REMOVE" com o "itemId" desse produto! NUNCA use action="ADD" quando o cliente pedir para retirar um item da lista e NUNCA mande o cardápio inteiro novamente se ele só pediu para remover um item!
+3. MODIFICAR TEMPERO OU PONTO DE ITEM JÁ NO CARRINHO (action="UPDATE_LAST"): Se o cliente pedir apenas para retirar um ingrediente/tempero da comida (ex: "retire a cebola", "sem alho", "pouco sal") ou mudar o ponto da carne de algo que JÁ está no carrinho, use action="UPDATE_LAST" preenchendo "doneness" e/ou "seasoningNotes".
+4. ESVAZIAR SACOLA (action="CLEAR"): Se o cliente pedir para limpar tudo ou cancelar todo o pedido, use action="CLEAR".`;
         }
 
         async function callGeminiAgent(userMessage) {
@@ -1059,11 +1085,11 @@ ${cartSummaryText}
                             properties: {
                                 action: {
                                     type: "STRING",
-                                    description: "Valores permitidos: 'ADD', 'REMOVE', 'CLEAR'"
+                                    description: "Valores permitidos: 'ADD' (adicionar produto), 'REMOVE' (retirar produto da sacola), 'UPDATE_LAST' (alterar tempero/ponto de item já na sacola), 'CLEAR' (esvaziar sacola)"
                                 },
                                 itemId: {
                                     type: "STRING",
-                                    description: "ID exato do produto no catálogo do dia (ex: 'SEG-M1', 'BEB-SUCO')"
+                                    description: "ID exato do produto no catálogo do dia (ex: 'SEG-M1', 'EXT-OVO', 'BEB-COCA')"
                                 },
                                 quantity: {
                                     type: "INTEGER",
@@ -1133,13 +1159,26 @@ ${cartSummaryText}
         }
 
         /********************************************************************
-         * 7. MOTOR NLU LOCAL & GARANTIDOR DE EXTRAS (HÍBRIDO COM LLM)
-         * Extrai marmitas, TODOS os extras/adicionais, bebidas, sobremesas,
-         * temperos e ponto de cozimento a partir do texto do usuário.
+         * 7. MOTOR NLU LOCAL & GARANTIDOR DE EXTRAS E REMOÇÕES (HÍBRIDO)
+         *istingue com 100% de precisão:
+         * - CASO A: Remover ingrediente/tempero (ex: "sem cebola", "retire o alho")
+         * - CASO B: Remover produto da lista/sacola (ex: "tire a coca", "retire o ovo")
+         * - CASO C: Limpar todo o pedido ("limpar sacola", "cancelar tudo")
+         * - CASO D: Adicionar marmitas, extras, bebidas e sobremesas
          ********************************************************************/
         function extractOrderIntentFromText(userMessage, targetDayKey) {
             const norm = normalizeText(userMessage);
             const actions = [];
+
+            // CASO C: Limpar toda a sacola / cancelar pedido inteiro
+            if (/(limpar\s+(tudo|sacola|carrinho|pedido|lista)|esvaziar\s+(sacola|carrinho|pedido)|cancelar\s+(tudo|todo\s+o\s+pedido)|remover\s+todos\s+os\s+itens|apagar\s+tudo)/.test(norm)) {
+                return {
+                    actions: [{ action: "CLEAR", itemId: "ALL", quantity: 1, doneness: "Não se aplica", seasoningNotes: "" }],
+                    detectedDoneness: "",
+                    seasoningNotes: "",
+                    hasRemovalIntent: true
+                };
+            }
 
             // 1. Detecta ponto de cozimento solicitado
             let detectedDoneness = "";
@@ -1149,28 +1188,25 @@ ${cartSummaryText}
             else if (/(gema\s*mole)/.test(norm)) detectedDoneness = "Gema mole";
             else if (/(gema\s*dura)/.test(norm)) detectedDoneness = "Gema dura";
 
-            // 2. Detecta alterações de temperos / ingredientes
+            // 2. CASO A: Detecta alterações de temperos / remoção de ingredientes da comida
             const notesList = [];
-            if (/(sem\s+cebola|remover\s+a?\s*cebola|retirar\s+a?\s*cebola|tira\s+a?\s*cebola|nao\s+coloca\s+cebola)/.test(norm)) notesList.push("Sem cebola");
-            if (/(sem\s+alho|remover\s+o?\s*alho|tira\s+o?\s*alho)/.test(norm)) notesList.push("Sem alho");
-            if (/(pouco\s+sal|sem\s+sal|menos\s+sal)/.test(norm)) notesList.push("Pouco sal");
-            if (/(sem\s+pimenta|zero\s+pimenta)/.test(norm)) notesList.push("Sem pimenta");
+            if (/(sem\s+cebola|remover\s+a?\s*cebola|retirar\s+a?\s*cebola|retire\s+a?\s*cebola|tire\s+a?\s*cebola|tira\s+a?\s*cebola|nao\s+coloca\s+cebola|nao\s+quero\s+cebola)/.test(norm)) notesList.push("Sem cebola");
+            if (/(sem\s+alho|remover\s+o?\s*alho|retirar\s+o?\s*alho|retire\s+o?\s*alho|tire\s+o?\s*alho|tira\s+o?\s*alho)/.test(norm)) notesList.push("Sem alho");
+            if (/(pouco\s+sal|sem\s+sal|menos\s+sal|reduzir\s+o\s+sal|tira\s+o\s+sal)/.test(norm)) notesList.push("Pouco sal");
+            if (/(sem\s+pimenta|zero\s+pimenta|tira\s+a?\s*pimenta|retire\s+a?\s*pimenta)/.test(norm)) notesList.push("Sem pimenta");
             if (/(bastante\s+cebola|mais\s+cebola|cebola\s+extra|dobro\s+de\s+cebola)/.test(norm)) notesList.push("Extra cebola");
-            if (/(sem\s+feijao|tira\s+o\s+feijao)/.test(norm)) notesList.push("Sem feijão");
-            if (/(sem\s+farofa|tira\s+a\s+farofa)/.test(norm)) notesList.push("Sem farofa");
+            if (/(sem\s+feijao|tira\s+o\s+feijao|retire\s+o\s+feijao|remover\s+o\s+feijao)/.test(norm)) notesList.push("Sem feijão");
+            if (/(sem\s+arroz|tira\s+o\s+arroz|retire\s+o\s+arroz)/.test(norm)) notesList.push("Sem arroz");
+            if (/(sem\s+farofa|tira\s+a\s+farofa)/.test(norm) && !appState.cart.some(c => c.itemId === "EXT-FAROFA")) notesList.push("Sem farofa na marmita");
             if (/(sem\s+acucar|zero\s+acucar)/.test(norm)) notesList.push("Sem açúcar");
             if (/(com\s+gelo|bastante\s+gelo)/.test(norm)) notesList.push("Com gelo");
-            if (/(sem\s+gelo)/.test(norm)) notesList.push("Sem gelo");
+            if (/(sem\s+gelo|tira\s+o\s+gelo)/.test(norm)) notesList.push("Sem gelo");
 
             const seasoningNotes = notesList.length > 0 ? notesList.join(", ") : "";
 
-            // Se o usuário só estiver perguntando o cardápio / preços sem verbo de pedido
-            const isJustAskingMenu = /(qual\s+e\s+o\s+cardapio|o\s+que\s+tem\s+hoje|quais\s+sao\s+os\s+itens|ver\s+cardapio|quais\s+os\s+precos)/.test(norm) &&
-                                     !/(quero|adicione|adicionar|coloca|coloque|bota|manda|me\s+ve|pedir)/.test(norm);
-
-            if (isJustAskingMenu) {
-                return { actions: [], detectedDoneness, seasoningNotes };
-            }
+            // Verifica se o usuário está usando verbos explícitos de REMOÇÃO / EXCLUSÃO
+            const hasRemoveVerb = /\b(retire|retirar|retira|tire|tirar|tira|remova|remover|remove|excluir|exclua|exclui|cancele|cancelar|cancela|arranca|deleta|deletar|nao\s+quero\s+mais|desisto\s+d[oa])\b/.test(norm);
+            const hasAddVerb = /\b(quero|adicione|adicionar|adiciona|coloca|coloque|bota|bote|manda|me\s+ve|incluir|inclua|pedir|mais\s+um|mais\s+uma)\b/.test(norm) && !/nao\s+quero/.test(norm);
 
             // Função auxiliar para extrair quantidade próxima à palavra-chave
             function extractQtyNearKeyword(text, keywordRegex) {
@@ -1183,14 +1219,116 @@ ${cartSummaryText}
                 return 1;
             }
 
+            // Mapa unificado de todos os produtos que podem ser referenciados na frase
             const dayMarmitas = (MENU_BY_DAY[targetDayKey] || MENU_BY_DAY.segunda).marmitas;
+            const productMatchers = [
+                { id: "EXT-OVO", regex: /\b(ovos?|ovo\s+frito|ovo\s+extra|adicional\s+de\s+ovo)\b/, kw: "ovos?|ovo" },
+                { id: "EXT-BACON", regex: /\b(bacon|porcao\s+de\s+bacon|bacon\s+extra|bacon\s+crocante|torresmo\s+extra)\b/, kw: "bacon|porcao" },
+                { id: "EXT-BIFE", regex: /\b(bife\s+extra|adicional\s+de\s+bife|mais\s+um\s+bife|carne\s+extra|adicional\s+de\s+carne)\b/, kw: "bife\s+extra|carne\s+extra" },
+                { id: "EXT-FRANGO", regex: /\b(frango\s+extra|file\s+extra|adicional\s+de\s+frango)\b/, kw: "frango\s+extra|file\s+extra" },
+                { id: "EXT-BAT", regex: /\b(batatas?|batata\s+frita|batata\s+extra|porcao\s+de\s+batata|fritas)\b/, kw: "batatas?|porcao|fritas" },
+                { id: "EXT-FAROFA", regex: /\b(farofa|farofa\s+extra|porcao\s+de\s+farofa|adicional\s+de\s+farofa)\b/, kw: "farofa" },
+                { id: "EXT-QUEIJO", regex: /\b(queijo|queijo\s+extra|adicional\s+de\s+queijo|mussarela)\b/, kw: "queijo|mussarela" },
+                { id: "EXT-SALADA", regex: /\b(salada|salada\s+extra|porcao\s+de\s+salada|adicional\s+de\s+salada)\b/, kw: "salada" },
+                { id: "BEB-SUCO", regex: /\b(sucos?|suco\s+de\s+laranja|suco\s+natural)\b/, kw: "sucos?" },
+                { id: "BEB-COCA2L", regex: /\b(coca\s*2\s*l|coca\s*2\s*litros|refrigerante\s*2\s*l|coca\s+grande)\b/, kw: "coca|garrafa|refrigerante" },
+                { id: "BEB-COCA", regex: /\b(coca|coca-cola|coca\s+lata|refrigerante\s+lata|refrigerante|refri)\b/, kw: "coca|lata|refrigerante|refri" },
+                { id: "BEB-GUARANA", regex: /\b(guarana|guarana\s+lata)\b/, kw: "guarana" },
+                { id: "BEB-AGUA", regex: /\b(aguas?|agua\s+mineral|agua\s+com\s+gas)\b/, kw: "aguas?" },
+                { id: "SOB-PUDIM", regex: /\b(pudim|pudins)\b/, kw: "pudim|pudins" },
+                { id: "SOB-MOUSSE", regex: /\b(mousse|maracuja)\b/, kw: "mousse" },
+                { id: "SOB-BROWNIE", regex: /\b(brownie|chocolate)\b/, kw: "brownie" }
+            ];
 
-            // 3. Verifica se pediu alguma Marmita Principal do dia
-            // Cuidado para diferenciar "bife extra / frango extra" de uma Marmita completa!
+            // CASO B: O usuário pediu para RETIRAR / REMOVER algum item da lista/sacola!
+            if (hasRemoveVerb && !hasAddVerb) {
+                let matchedRemoval = false;
+
+                // 1. Verifica se algum item atualmente no carrinho foi citado para remoção
+                for (const cartItem of appState.cart) {
+                    const normCartName = normalizeText(cartItem.name);
+                    const prodObj = findOfficialProduct(cartItem.itemId, targetDayKey);
+                    const keywords = prodObj && Array.isArray(prodObj.keywords) ? prodObj.keywords : [];
+
+                    const matchesByKeyword = keywords.some(kw => norm.includes(normalizeText(kw)));
+                    const matchesByName = norm.includes(normCartName) ||
+                        (cartItem.itemId.includes("-M") && /\b(marmita|prato|bife|frango|omelete|feijoada|lasanha|peixe|tilapia|bisteca|picanha|churrasco)\b/.test(norm));
+
+                    if (matchesByKeyword || matchesByName) {
+                        const qty = extractQtyNearKeyword(norm, "item|itens|unidade|unidades|marmita|coca|ovo|bacon|batata|pudim|suco|agua|guarana|bife|frango");
+                        actions.push({
+                            action: "REMOVE",
+                            itemId: cartItem.itemId,
+                            quantity: qty,
+                            doneness: "Não se aplica",
+                            seasoningNotes: ""
+                        });
+                        matchedRemoval = true;
+                    }
+                }
+
+                // 2. Se mencionou um produto do catálogo para remover (mesmo que buscando pelo matcher geral)
+                if (!matchedRemoval) {
+                    for (const pm of productMatchers) {
+                        if (pm.regex.test(norm)) {
+                            actions.push({
+                                action: "REMOVE",
+                                itemId: pm.id,
+                                quantity: 1,
+                                doneness: "Não se aplica",
+                                seasoningNotes: ""
+                            });
+                            matchedRemoval = true;
+                        }
+                    }
+                }
+
+                // 3. Se o usuário disse apenas "retire o último item" ou "tira um item da lista"
+                if (!matchedRemoval && /\b(ultimo\s+item|item\s+da\s+lista|item\s+da\s+sacola|item\s+do\s+pedido|produto)\b/.test(norm) && appState.cart.length > 0) {
+                    const lastCartItem = appState.cart[appState.cart.length - 1];
+                    actions.push({
+                        action: "REMOVE",
+                        itemId: lastCartItem.itemId,
+                        quantity: 1,
+                        doneness: "Não se aplica",
+                        seasoningNotes: ""
+                    });
+                    matchedRemoval = true;
+                }
+
+                // 4. Se não era um produto da sacola, mas sim um ingrediente (ex: "retire a cebola", "tire o alho")
+                if (!matchedRemoval && (seasoningNotes || detectedDoneness) && appState.cart.length > 0) {
+                    actions.push({
+                        action: "UPDATE_LAST",
+                        itemId: appState.cart[appState.cart.length - 1].itemId,
+                        quantity: 1,
+                        doneness: detectedDoneness,
+                        seasoningNotes: seasoningNotes
+                    });
+                }
+
+                return {
+                    actions,
+                    detectedDoneness,
+                    seasoningNotes,
+                    hasRemovalIntent: true
+                };
+            }
+
+            // Se o usuário só estiver perguntando o cardápio / preços sem verbo de pedido
+            const isJustAskingMenu = /(qual\s+e\s+o\s+cardapio|o\s+que\s+tem\s+hoje|quais\s+sao\s+os\s+itens|ver\s+cardapio|quais\s+os\s+precos)/.test(norm) && !hasAddVerb;
+            if (isJustAskingMenu) {
+                return { actions: [], detectedDoneness, seasoningNotes, hasRemovalIntent: false };
+            }
+
+            // CASO D: Adição de Marmitas Principais do dia
             const mentionsBifeExtraOnly = /(bife\s+extra|adicional\s+de\s+bife|adicional\s+de\s+carne|carne\s+extra)/.test(norm) && !/(marmita)/.test(norm);
             const mentionsFrangoExtraOnly = /(frango\s+extra|file\s+extra|adicional\s+de\s+frango)/.test(norm) && !/(marmita)/.test(norm);
 
-            if (!mentionsBifeExtraOnly && /(marmita.*bife|bife\s+de\s+vaca|bife\s+acebolado|bife\s+na\s+chapa|bife\s+a\s+cavalo|contrafile|picanha|parmegiana|churrasco\s+misto)/.test(norm)) {
+            // Evita adicionar marmita de bife se a pessoa só disse "tire a cebola do bife" quando já tem bife no carrinho
+            const isOnlyModifyingExistingBeef = hasRemoveVerb && !hasAddVerb && appState.cart.some(c => c.requiresDoneness);
+
+            if (!isOnlyModifyingExistingBeef && !mentionsBifeExtraOnly && /(marmita.*bife|bife\s+de\s+vaca|bife\s+acebolado|bife\s+na\s+chapa|bife\s+a\s+cavalo|contrafile|picanha|parmegiana|churrasco\s+misto)/.test(norm)) {
                 const beefDish = dayMarmitas.find(m => m.requiresDoneness) || dayMarmitas[0];
                 const qty = extractQtyNearKeyword(norm, "marmita|bife|contrafile|picanha|churrasco");
                 actions.push({
@@ -1281,33 +1419,17 @@ ${cartSummaryText}
                 }
             }
 
-            // 4. Verifica TODOS os Adicionais / Extras, Bebidas e Sobremesas
-            const extraMatchers = [
-                { id: "EXT-OVO", regex: /\b(ovos?|ovo\s+frito|ovo\s+extra|adicional\s+de\s+ovo)\b/, kw: "ovos?|ovo" },
-                { id: "EXT-BACON", regex: /\b(bacon|porcao\s+de\s+bacon|bacon\s+extra|bacon\s+crocante|torresmo\s+extra)\b/, kw: "bacon|porcao" },
-                { id: "EXT-BIFE", regex: /\b(bife\s+extra|adicional\s+de\s+bife|mais\s+um\s+bife|carne\s+extra|adicional\s+de\s+carne)\b/, kw: "bife\s+extra|carne\s+extra" },
-                { id: "EXT-FRANGO", regex: /\b(frango\s+extra|file\s+extra|adicional\s+de\s+frango)\b/, kw: "frango\s+extra|file\s+extra" },
-                { id: "EXT-BAT", regex: /\b(batatas?|batata\s+frita|batata\s+extra|porcao\s+de\s+batata|fritas)\b/, kw: "batatas?|porcao|fritas" },
-                { id: "EXT-FAROFA", regex: /\b(farofa\s+extra|porcao\s+de\s+farofa|adicional\s+de\s+farofa|mais\s+farofa)\b/, kw: "farofa" },
-                { id: "EXT-QUEIJO", regex: /\b(queijo\s+extra|adicional\s+de\s+queijo|mussarela\s+extra|com\s+queijo\s+extra)\b/, kw: "queijo|mussarela" },
-                { id: "EXT-SALADA", regex: /\b(salada\s+extra|porcao\s+de\s+salada|adicional\s+de\s+salada)\b/, kw: "salada" },
-                { id: "BEB-SUCO", regex: /\b(sucos?|suco\s+de\s+laranja|suco\s+natural)\b/, kw: "sucos?" },
-                { id: "BEB-COCA2L", regex: /\b(coca\s*2\s*l|coca\s*2\s*litros|refrigerante\s*2\s*l|coca\s+grande)\b/, kw: "coca|garrafa|refrigerante" },
-                { id: "BEB-COCA", regex: /\b(coca|coca-cola|coca\s+lata|refrigerante\s+lata|refri)\b/, kw: "coca|lata|refrigerante|refri" },
-                { id: "BEB-GUARANA", regex: /\b(guarana|guarana\s+lata)\b/, kw: "guarana" },
-                { id: "BEB-AGUA", regex: /\b(aguas?|agua\s+mineral|agua\s+com\s+gas)\b/, kw: "aguas?" },
-                { id: "SOB-PUDIM", regex: /\b(pudim|pudins)\b/, kw: "pudim|pudins" },
-                { id: "SOB-MOUSSE", regex: /\b(mousse|maracuja)\b/, kw: "mousse" }
-            ];
-
-            for (const em of extraMatchers) {
-                // Evita adicionar Coca Lata se já bateu Coca 2L na mesma frase sem pedir lata
+            // Verifica Adicionais / Extras, Bebidas e Sobremesas para ADIÇÃO
+            for (const em of productMatchers) {
                 if (em.id === "BEB-COCA" && actions.some(a => a.itemId === "BEB-COCA2L") && !/\blata\b/.test(norm)) {
                     continue;
                 }
-                // Evita confundir "sem batata" ou "sem ovo" com adição de extra
-                if (em.id === "EXT-OVO" && /(sem\s+ovo|tira\s+o\s+ovo)/.test(norm)) continue;
-                if (em.id === "EXT-BAT" && /(sem\s+batata|tira\s+a\s+batata)/.test(norm)) continue;
+                // Evita confundir "sem ovo / sem batata / sem farofa / sem salada" com adição de extra
+                if (em.id === "EXT-OVO" && /(sem\s+ovo|tira\s+o\s+ovo|retire\s+o\s+ovo)/.test(norm)) continue;
+                if (em.id === "EXT-BAT" && /(sem\s+batata|tira\s+a\s+batata|retire\s+a\s+batata)/.test(norm)) continue;
+                if (em.id === "EXT-FAROFA" && (/(sem\s+farofa|tira\s+a\s+farofa)/.test(norm) || !/(farofa\s+extra|porcao\s+de\s+farofa|adicional\s+de\s+farofa|mais\s+farofa|1\s+farofa)/.test(norm))) continue;
+                if (em.id === "EXT-SALADA" && (/(sem\s+salada|tira\s+a\s+salada)/.test(norm) || !/(salada\s+extra|porcao\s+de\s+salada|adicional\s+de\s+salada|mais\s+salada|1\s+salada)/.test(norm))) continue;
+                if (em.id === "EXT-QUEIJO" && !/(queijo\s+extra|adicional\s+de\s+queijo|mussarela\s+extra|porcao\s+de\s+queijo|1\s+queijo)/.test(norm)) continue;
 
                 if (em.regex.test(norm)) {
                     const qty = extractQtyNearKeyword(norm, em.kw);
@@ -1321,7 +1443,7 @@ ${cartSummaryText}
                 }
             }
 
-            // 5. Caso o usuário não tenha adicionado nenhum item novo, mas tenha pedido para mudar o ponto ou tempero do item que já está na sacola
+            // Caso o usuário não tenha adicionado nem removido produto, mas tenha pedido para mudar o ponto ou tempero do item que já está na sacola
             if (actions.length === 0 && (detectedDoneness || seasoningNotes) && appState.cart.length > 0) {
                 actions.push({
                     action: "UPDATE_LAST",
@@ -1332,14 +1454,14 @@ ${cartSummaryText}
                 });
             }
 
-            return { actions, detectedDoneness, seasoningNotes };
+            return { actions, detectedDoneness, seasoningNotes, hasRemovalIntent: false };
         }
 
         function processLocalFallbackEngine(userMessage) {
             const lower = normalizeText(userMessage);
             let changeDayTo = "";
 
-            // Detecta mudança de dia apenas se não for pedido de adição simples
+            // Detecta mudança de dia apenas se não for pedido de adição/remoção
             const dayMap = {
                 "segunda": "segunda", "terca": "terca",
                 "quarta": "quarta", "quinta": "quinta", "sexta": "sexta",
@@ -1358,20 +1480,57 @@ ${cartSummaryText}
 
             let reply = "";
             if (actions.length > 0) {
-                const summaryNames = actions.map(a => {
-                    if (a.action === "UPDATE_LAST") return `atualização de preparo (${[a.doneness, a.seasoningNotes].filter(Boolean).join(" | ")})`;
-                    const prod = findOfficialProduct(a.itemId, targetDay);
-                    return prod ? `${a.quantity}x **${prod.name}** (${formatBRL(prod.price)}/un)` : a.itemId;
-                }).join(", ");
+                const addSummaries = [];
+                const removeSummaries = [];
+                const updateSummaries = [];
+                let clearedAll = false;
 
-                reply = `Perfeito! Anotei no seu pedido: ${summaryNames}. Confira no card abaixo o resumo atualizado da sua sacola com o valor total e a taxa de entrega!`;
+                for (const a of actions) {
+                    if (a.action === "CLEAR") {
+                        clearedAll = true;
+                    } else if (a.action === "REMOVE") {
+                        const prod = findOfficialProduct(a.itemId, targetDay);
+                        removeSummaries.push(prod ? `**${prod.name}**` : `**${a.itemId}**`);
+                    } else if (a.action === "UPDATE_LAST") {
+                        updateSummaries.push([a.doneness, a.seasoningNotes].filter(Boolean).join(" | "));
+                    } else if (a.action === "ADD") {
+                        const prod = findOfficialProduct(a.itemId, targetDay);
+                        addSummaries.push(prod ? `${a.quantity}x **${prod.name}** (${formatBRL(prod.price)}/un)` : a.itemId);
+                    }
+                }
+
+                if (clearedAll) {
+                    reply = `Prontinho! Esvaziei toda a sua sacola de pedidos. Quando quiser montar um novo pedido, é só me dizer!`;
+                } else {
+                    const parts = [];
+                    if (removeSummaries.length > 0) {
+                        parts.push(`retirei ${removeSummaries.join(", ")} da sua lista de pedido`);
+                    }
+                    if (updateSummaries.length > 0) {
+                        parts.push(`atualizei a observação do seu prato para **${updateSummaries.join(", ")}**`);
+                    }
+                    if (addSummaries.length > 0) {
+                        parts.push(`adicionei ${addSummaries.join(", ")} à sua comanda`);
+                    }
+                    reply = `Combinado! Já ${parts.join(" e ")}. Confira abaixo o resumo atualizado do seu pedido com entrega!`;
+                }
+            } else if (extracted.hasRemovalIntent) {
+                if (appState.cart.length === 0) {
+                    reply = `Sua sacola já está vazia no momento! Se quiser pedir alguma marmita ou item extra, é só me falar.`;
+                } else {
+                    const currentNames = appState.cart.map(c => `• ${c.quantity}x **${c.name}**`).join("\n");
+                    reply = `Não encontrei esse item específico na sua sacola para remover. No momento, sua lista tem:\n${currentNames}\n\nQual deles você gostaria de retirar ou alterar?`;
+                }
+            } else if (/(total|valor|quanto\s+fica|fechar|conta|entrega)/.test(lower) && appState.cart.length > 0) {
+                const totals = calculateOrderTotals();
+                reply = `O subtotal dos seus itens está em **${formatBRL(totals.subtotal)}**, mais a taxa de entrega de **${formatBRL(totals.delivery)}** (${appState.deliveryZone}), fechando o **valor total de ${formatBRL(totals.total)}**!`;
             } else {
                 const dayMarmitas = (MENU_BY_DAY[targetDay] || MENU_BY_DAY.segunda).marmitas;
                 const marmitasStr = dayMarmitas.map(i => `• **${i.name}**: ${formatBRL(i.price)}`).join("\n");
                 const extrasStr = FIXED_DAILY_ITEMS.slice(0, 8).map(i => `• **${i.name}**: ${formatBRL(i.price)}`).join("\n");
                 const drinksStr = FIXED_DAILY_ITEMS.slice(8).map(i => `• **${i.name}**: ${formatBRL(i.price)}`).join("\n");
 
-                reply = `Aqui está o nosso cardápio de **${MENU_BY_DAY[targetDay].label}** com os preços por unidade:\n\n**🍛 Marmitas do Dia:**\n${marmitasStr}\n\n**🍟 Adicionais e Extras:**\n${extrasStr}\n\n**🥤 Bebidas e Sobremesas:**\n${drinksStr}\n\nVocê pode pedir qualquer combinação por texto, adicionar extras (como *ovo frito, bacon, batata frita, bife extra*) e personalizar temperos (*sem cebola, pouco sal*) ou o ponto da carne!`;
+                reply = `Aqui está o nosso cardápio de **${MENU_BY_DAY[targetDay].label}** com os preços por unidade:\n\n**🍛 Marmitas do Dia:**\n${marmitasStr}\n\n**🍟 Adicionais e Extras:**\n${extrasStr}\n\n**🥤 Bebidas e Sobremesas:**\n${drinksStr}\n\nVocê pode pedir ou retirar itens por texto, adicionar extras e personalizar temperos (*sem cebola, pouco sal*) ou o ponto da carne!`;
             }
 
             return {
@@ -1456,24 +1615,29 @@ ${cartSummaryText}
                 document.getElementById('deliveryAddressInput').value = appState.deliveryAddress;
             }
 
-            // 3. Executa ações no carrinho retornadas pelo LLM + Rede de Segurança Híbrida para Extras!
+            // Analisa intenção local para proteger contra falsos positivos (ex: impedir ADD quando o usuário pediu REMOVE)
+            const localExtracted = extractOrderIntentFromText(userText, appState.selectedDay);
+
+            // 3. Executa ações no carrinho retornadas pelo LLM + Rede de Segurança Híbrida
             const appliedChanges = [];
-            const addedProductIdsThisTurn = new Set();
+            const processedProductIdsThisTurn = new Set();
 
             if (Array.isArray(data.cartActions)) {
                 for (const act of data.cartActions) {
                     const actionType = String(act.action || "").toUpperCase();
                     if (actionType === "CLEAR") {
                         appState.cart = [];
-                        appliedChanges.push("Sacola limpa");
+                        appliedChanges.push("Sacola esvaziada");
                     } else if (actionType === "REMOVE") {
-                        const prod = findOfficialProduct(act.itemId);
-                        const removed = removeCartItemById(prod ? prod.id : act.itemId);
-                        if (removed) appliedChanges.push(`Removido: ${act.itemId}`);
+                        const removed = removeCartItemFlexible(act.itemId, act.quantity || null);
+                        if (removed) {
+                            processedProductIdsThisTurn.add(removed.itemId);
+                            appliedChanges.push(`Removido: ${removed.name}`);
+                        }
                     } else if (actionType === "UPDATE_LAST" || actionType === "UPDATE") {
                         const updated = updateExistingCartItemCustomizations(act.doneness, act.seasoningNotes);
-                        if (updated) appliedChanges.push(`Preparo atualizado`);
-                    } else if (actionType === "ADD") {
+                        if (updated) appliedChanges.push(`Preparo atualizado (${updated.name})`);
+                    } else if (actionType === "ADD" && !localExtracted.hasRemovalIntent) {
                         const res = addItemToCart(
                             act.itemId,
                             act.quantity || 1,
@@ -1481,20 +1645,25 @@ ${cartSummaryText}
                             act.seasoningNotes || "Temperos padrão"
                         );
                         if (res.success) {
-                            addedProductIdsThisTurn.add(res.itemId);
+                            processedProductIdsThisTurn.add(res.itemId);
                             appliedChanges.push(`+${res.quantity}x ${res.item} (${formatBRL(res.unitPrice)}/un)`);
                         }
                     }
                 }
             }
 
-            // 4. REDE DE SEGURANÇA HÍBRIDA:
-            // Se o usuário pediu itens extras/adicionais no texto (ex: "adiciona ovo frito, bacon e coca")
-            // e o LLM esqueceu de colocar algum deles em cartActions ou mandou ID inválido,
-            // o extrator determinístico garante que nenhum item extra deixe de entrar no carrinho!
-            const localExtracted = extractOrderIntentFromText(userText, appState.selectedDay);
+            // 4. REDE DE SEGURANÇA HÍBRIDA (Garante remoções, alterações de tempero e adições de extras):
             for (const fallbackAct of localExtracted.actions) {
-                if (fallbackAct.action === "ADD" && !addedProductIdsThisTurn.has(fallbackAct.itemId)) {
+                if (fallbackAct.action === "CLEAR" && appState.cart.length > 0) {
+                    appState.cart = [];
+                    appliedChanges.push("Sacola esvaziada");
+                } else if (fallbackAct.action === "REMOVE" && !processedProductIdsThisTurn.has(fallbackAct.itemId)) {
+                    const removed = removeCartItemFlexible(fallbackAct.itemId, fallbackAct.quantity || null);
+                    if (removed) {
+                        processedProductIdsThisTurn.add(removed.itemId);
+                        appliedChanges.push(`Removido: ${removed.name}`);
+                    }
+                } else if (fallbackAct.action === "ADD" && !localExtracted.hasRemovalIntent && !processedProductIdsThisTurn.has(fallbackAct.itemId)) {
                     const res = addItemToCart(
                         fallbackAct.itemId,
                         fallbackAct.quantity || 1,
@@ -1502,7 +1671,7 @@ ${cartSummaryText}
                         fallbackAct.seasoningNotes
                     );
                     if (res.success) {
-                        addedProductIdsThisTurn.add(res.itemId);
+                        processedProductIdsThisTurn.add(res.itemId);
                         appliedChanges.push(`+${res.quantity}x ${res.item} (${formatBRL(res.unitPrice)}/un)`);
                     }
                 } else if (fallbackAct.action === "UPDATE_LAST" && appliedChanges.length === 0) {
@@ -1517,7 +1686,7 @@ ${cartSummaryText}
             appState.chatHistory.push({ role: 'user', text: userText });
             appState.chatHistory.push({ role: 'model', text: data.reply || "" });
 
-            // 6. Exibe resposta + card de resumo financeiro com entrega se houver itens no carrinho
+            // 6. Exibe resposta + card de resumo financeiro com entrega se houver itens no carrinho ou alterações aplicadas
             appendChatMessage('bot', data.reply, appliedChanges.length > 0 || appState.cart.length > 0);
         }
 
@@ -1896,9 +2065,13 @@ ${cartSummaryText}
         function saveCustomApiKey() {
             const val = document.getElementById('customApiKeyInput').value.trim();
             if (val) {
+                localStorage.setItem("marmitaria_gemini_key", val);
                 sessionStorage.setItem("MARMITARIA_CUSTOM_GEMINI_KEY", val);
+                appState.apiKey = val;
             } else {
+                localStorage.removeItem("marmitaria_gemini_key");
                 sessionStorage.removeItem("MARMITARIA_CUSTOM_GEMINI_KEY");
+                appState.apiKey = DEFAULT_API_KEY;
             }
             const fb = document.getElementById('apiKeySavedFeedback');
             fb.classList.remove('hidden');
